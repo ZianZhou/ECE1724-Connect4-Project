@@ -1,0 +1,5 @@
+/target
+
+.history/
+.DS_Store
+Cargo.lock
