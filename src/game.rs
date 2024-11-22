@@ -153,3 +153,8 @@ impl Game {
         }
     }
 }
+
+pub fn backend() {
+    let mut game = Game::new();
+    game.play();
+}
