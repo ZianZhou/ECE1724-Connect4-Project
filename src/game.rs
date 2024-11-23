@@ -30,9 +30,7 @@ impl Game {
         }
     }
 
-    // pub fn get_board(&self) -> &[[char; COLS]; ROWS] {
-    //     &self.board
-    // }
+    //used in frontend calls
     pub fn get_board(&self) -> &Vec<Vec<char>> {
         &self.board
     }
@@ -47,11 +45,11 @@ impl Game {
     }
 
     pub fn drop_piece(&mut self, col: usize) -> Result<(), String> {
-        if col >= COLS {
+        if col >= self.cols {
             return Err("Invalid column.".to_string());
         }
 
-        for row in 0..ROWS {
+        for row in 0..self.rows {
             if self.board[row][col] == EMPTY {
                 self.board[row][col] = self.current_player;
                 return Ok(());
@@ -70,12 +68,12 @@ impl Game {
     }
 
     pub fn check_winner(&self) -> Option<char> {
-        for row in 0..ROWS {
-            for col in 0..COLS {
+        for row in 0..self.rows {
+            for col in 0..self.cols {
                 if self.board[row][col] != EMPTY {
                     let player = self.board[row][col];
                     //check in three directions
-                    if col + 3 < COLS
+                    if col + 3 < self.cols
                         && self.board[row][col + 1] == player
                         && self.board[row][col + 2] == player
                         && self.board[row][col + 3] == player
@@ -83,7 +81,7 @@ impl Game {
                         return Some(player);
                     }
 
-                    if row + 3 < ROWS
+                    if row + 3 < self.rows
                         && self.board[row + 1][col] == player
                         && self.board[row + 2][col] == player
                         && self.board[row + 3][col] == player
@@ -91,8 +89,8 @@ impl Game {
                         return Some(player);
                     }
 
-                    if row + 3 < ROWS
-                        && col + 3 < COLS
+                    if row + 3 < self.rows
+                        && col + 3 < self.cols
                         && self.board[row + 1][col + 1] == player
                         && self.board[row + 2][col + 2] == player
                         && self.board[row + 3][col + 3] == player
@@ -101,7 +99,7 @@ impl Game {
                     }
 
                     if row >= 3
-                        && col + 3 < COLS
+                        && col + 3 < self.cols
                         && self.board[row - 1][col + 1] == player
                         && self.board[row - 2][col + 2] == player
                         && self.board[row - 3][col + 3] == player
