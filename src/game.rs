@@ -5,21 +5,35 @@ pub const COLS: usize = 7;
 pub const EMPTY: char = '.';
 pub const PLAYER_X: char = 'X';
 pub const PLAYER_O: char = 'O';
+pub const EXPANDED_ROWS: usize = 10;
+pub const EXPANDED_COLS: usize = 10;
+
+pub static mut IF_EXPAND: bool = false;
+
 
 pub struct Game {
-    board: [[char; COLS]; ROWS],
+    board: Vec<Vec<char>>,
+    // board: [[char; COLS]; ROWS],
     current_player: char,
+    rows: usize,
+    cols: usize,
 }
 
 impl Game {
     pub fn new() -> Game {
         Game {
-            board: [[EMPTY; COLS]; ROWS],
+            // board: [[EMPTY; COLS]; ROWS],
+            board: vec![vec![EMPTY; COLS]; ROWS],
             current_player: PLAYER_X,
+            rows: ROWS,
+            cols: COLS,
         }
     }
 
-    pub fn get_board(&self) -> &[[char; COLS]; ROWS] {
+    // pub fn get_board(&self) -> &[[char; COLS]; ROWS] {
+    //     &self.board
+    // }
+    pub fn get_board(&self) -> &Vec<Vec<char>> {
         &self.board
     }
 
@@ -33,7 +47,6 @@ impl Game {
     }
 
     pub fn drop_piece(&mut self, col: usize) -> Result<(), String> {
-        println!("Go in drop_piece");
         if col >= COLS {
             return Err("Invalid column.".to_string());
         }
@@ -107,12 +120,28 @@ impl Game {
             .all(|row| row.iter().all(|&cell| cell != EMPTY))
     }
 
+    pub fn expand_board(&mut self) {
+        println!("Expanding the board to 10x10!");
+        self.rows = EXPANDED_ROWS;
+        self.cols = EXPANDED_COLS;
+        let mut new_board = vec![vec![EMPTY; EXPANDED_COLS]; EXPANDED_ROWS];
+
+        for r in 0..ROWS {
+            for c in 0..COLS {
+                new_board[r][c] = self.board[r][c];
+            }
+        }
+
+        self.board = new_board;
+    }
+
     pub fn play(&mut self) {
         loop {
             self.print_board();
             print!(
-                "Player {}'s turn. Enter column (0-6): ",
-                self.current_player
+                "Player {}'s turn. Enter column (0-{}): ",
+                self.current_player,
+                self.cols - 1
             );
             io::stdout().flush().unwrap();
 
@@ -121,10 +150,12 @@ impl Game {
 
             //input must be digits between 0-9
             let col = match input.trim().parse::<usize>() {
-                Ok(num) if num < COLS => num,
+                Ok(num) if num < self.cols => num,
                 _ => {
-                    //Todo: after grid expansion, update the column number
-                    println!("Invalid input. Please enter a number between 0 and 6.");
+                    println!(
+                        "Invalid input. Please enter a number between 0 and {}.",
+                        self.cols - 1
+                    );
                     continue;
                 }
             };
@@ -143,6 +174,14 @@ impl Game {
             }
 
             if self.is_full() {
+                unsafe {
+                    if !IF_EXPAND {
+                        IF_EXPAND = true;
+                        self.expand_board();
+                        continue;
+                    }
+                }
+
                 self.print_board();
                 println!("It's a tie!");
                 break;
