@@ -10,7 +10,6 @@ pub const EXPANDED_COLS: usize = 10;
 
 pub static mut IF_EXPAND: bool = false;
 
-
 pub struct Game {
     board: Vec<Vec<char>>,
     // board: [[char; COLS]; ROWS],
@@ -44,7 +43,11 @@ impl Game {
         }
     }
 
-    pub fn drop_piece(&mut self, col: usize) -> Result<(), String> {
+    pub fn get_current_player(&self) -> char {
+        self.current_player
+    }
+
+    pub fn drop_piece(&mut self, col: usize) -> Result<(usize, usize), String> {
         if col >= self.cols {
             return Err("Invalid column.".to_string());
         }
@@ -52,7 +55,7 @@ impl Game {
         for row in 0..self.rows {
             if self.board[row][col] == EMPTY {
                 self.board[row][col] = self.current_player;
-                return Ok(());
+                return Ok((row, col));
             }
         }
 
