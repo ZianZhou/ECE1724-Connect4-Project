@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.11"        # Bevy for game engine and rendering
-sdl2 = "0.35"        # SDL2 if you plan to use SDL2 directly (optional if you only use Bevy)
+sdl2 = "0.35"
+rand = "0.8"        # SDL2 if you plan to use SDL2 directly (optional if you only use Bevy)

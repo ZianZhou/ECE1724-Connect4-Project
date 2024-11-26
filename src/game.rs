@@ -1,4 +1,6 @@
 use std::io::{self, Write};
+use rand::random;
+
 //COLS should not exceed 10, easy to represent in digits
 pub const ROWS: usize = 6;
 pub const COLS: usize = 7;
@@ -8,6 +10,9 @@ pub const PLAYER_O: char = 'O';
 pub const EXPANDED_ROWS: usize = 10;
 pub const EXPANDED_COLS: usize = 10;
 
+// Power Up: Obstacle
+pub const OBSTACLE: char = '#'; // # represent the obstacle on the map
+
 pub static mut IF_EXPAND: bool = false;
 
 
@@ -15,6 +20,7 @@ pub struct Game {
     board: Vec<Vec<char>>,
     // board: [[char; COLS]; ROWS],
     current_player: char,
+    skip_turn: bool,
     rows: usize,
     cols: usize,
 }
@@ -25,6 +31,7 @@ impl Game {
             // board: [[EMPTY; COLS]; ROWS],
             board: vec![vec![EMPTY; COLS]; ROWS],
             current_player: PLAYER_X,
+            skip_turn: false,
             rows: ROWS,
             cols: COLS,
         }
@@ -49,10 +56,32 @@ impl Game {
             return Err("Invalid column.".to_string());
         }
 
+        // Iterate through rows in the column
         for row in 0..self.rows {
-            if self.board[row][col] == EMPTY {
-                self.board[row][col] = self.current_player;
+            // Allow placement on empty cells or Power-Ups
+            if self.board[row][col] == EMPTY || self.board[row][col] == 'P' {
+                // Ensure no piece is placed below an obstacle
+                if row > 0 && self.board[row - 1][col] == OBSTACLE && self.board[row][col] != 'P'{
+                    return Err("Cannot place a piece below an obstacle.".to_string());
+                }
+
+                // Trigger Power-Up effect if applicable
+                if self.board[row][col] == 'P' {
+                    println!("Power-Up activated!");
+                    self.activate_power_up(row, col);
+                }
+
+                self.board[row][col] = self.current_player; // Place the piece
                 return Ok(());
+            }
+
+            // Allow placement directly above an obstacle
+            if self.board[row][col] == OBSTACLE {
+                // Ensure this is the highest valid position
+                if row + 1 < self.rows && self.board[row + 1][col] == EMPTY {
+                    self.board[row + 1][col] = self.current_player; // Place above the obstacle
+                    return Ok(());
+                }
             }
         }
 
@@ -60,11 +89,92 @@ impl Game {
     }
 
     pub fn switch_player(&mut self) {
-        self.current_player = if self.current_player == PLAYER_X {
-            PLAYER_O
+        if self.skip_turn {
+            self.skip_turn = false; // represent the bool of skipping turns
         } else {
-            PLAYER_X
-        };
+            self.current_player = if self.current_player == PLAYER_X {
+                PLAYER_O
+            } else {
+                PLAYER_X
+            };
+        }
+    }
+
+    pub fn generate_power_up(&mut self) {
+        for _ in 0..10 {
+            // choose a col randomly
+            let col = random::<usize>() % self.cols;
+            for row in 0..self.rows {
+                if self.board[row][col] == EMPTY {
+                    // Make sure Power-Up can only be placed at the bottom
+                    if row == 0 || self.board[row - 1][col] != EMPTY {
+                        self.board[row][col] = 'P'; // P represent the Power Up
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn cleanup_power_ups(&mut self) {
+        for row in 0..self.rows {
+            for col in 0..self.cols {
+                if self.board[row][col] == 'P' {
+                    self.board[row][col] = EMPTY;
+                }
+            }
+        }
+    }
+
+    pub fn activate_power_up(&mut self, row: usize, col: usize) {
+        // random choose a Power Up element
+        match rand::random::<u8>() % 3 {
+            0 => {
+                println!("Power-Up activated: Skip opponent's turn!");
+                self.skip_turn = true;
+            },
+            1 => {
+                println!("Power-Up activated: Place obstacles!");
+                self.place_obstacles(row, col);
+            },
+            2 => {
+                println!("Power-Up activated: Bomb triggered!");
+                self.use_bomb(row, col);
+             },
+            _ => {}
+        }
+    }
+
+    // Power Up for Placing Obstacles
+    pub fn place_obstacles(&mut self, row: usize, col: usize) {
+        let deltas = [(0, -1), (0, 1)]; // Only consider left and right directions
+        for (dr, dc) in deltas.iter() {
+            let nr = row as isize + dr;
+            let nc = col as isize + dc;
+
+            // Ensure the position is within bounds
+            if nr >= 0 && nr < self.rows as isize && nc >= 0 && nc < self.cols as isize {
+                let target_row = nr as usize;
+                let target_col = nc as usize;
+
+                // Place obstacle only if the cell is empty or occupied by the opponent's piece
+                if self.board[target_row][target_col] == EMPTY || self.board[target_row][target_col] != self.current_player {
+                    self.board[target_row][target_col] = OBSTACLE; // Place the obstacle
+                }
+            }
+        }
+    }
+
+    // Power Up for Bombs (Clear the pieces between)
+    pub fn use_bomb(&mut self, row: usize, col: usize) {
+        let deltas = [(0, -1), (0, 1)];
+        for (dr, dc) in deltas.iter() {
+            let nr = row as isize + dr;
+            let nc = col as isize + dc;
+            if nr >= 0 && nr < self.rows as isize && nc >= 0 && nc < self.cols as isize {
+                self.board[nr as usize][nc as usize] = EMPTY;
+            }
+        }
     }
 
     pub fn check_winner(&self) -> Option<char> {
@@ -135,6 +245,13 @@ impl Game {
 
     pub fn play(&mut self) {
         loop {
+            // clean up untriggered Power Up
+            self.cleanup_power_ups();
+            // 20% percent possibility of generating Power Up
+            if rand::random::<u8>() % 5 == 0 {
+                self.generate_power_up();
+            }
+
             self.print_board();
             print!(
                 "Player {}'s turn. Enter column (0-{}): ",
