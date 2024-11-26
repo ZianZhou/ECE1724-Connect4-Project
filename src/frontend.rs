@@ -97,7 +97,7 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
             parent.spawn(
                 TextBundle {
                     text: Text::from_section(
-                        "Connect Four",
+                        "Rusty Connect Four",
                         TextStyle {
                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                             font_size: 60.0,
@@ -842,7 +842,7 @@ pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Connect Four".to_string(),
+                title: "Rusty Connect Four".to_string(),
                 resolution: (1280.0, 720.0).into(),
                 resizable: true,
                 ..default()

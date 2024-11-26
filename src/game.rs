@@ -1,5 +1,5 @@
-use std::io::{self, Write};
 use rand::random;
+use std::io::{self, Write};
 
 //COLS should not exceed 10, easy to represent in digits
 pub const ROWS: usize = 6;
@@ -64,7 +64,7 @@ impl Game {
             // Allow placement on empty cells or Power-Ups
             if self.board[row][col] == EMPTY || self.board[row][col] == 'P' {
                 // Ensure no piece is placed below an obstacle
-                if row > 0 && self.board[row - 1][col] == OBSTACLE && self.board[row][col] != 'P'{
+                if row > 0 && self.board[row - 1][col] == OBSTACLE && self.board[row][col] != 'P' {
                     return Err("Cannot place a piece below an obstacle.".to_string());
                 }
 
@@ -75,7 +75,7 @@ impl Game {
                 }
 
                 self.board[row][col] = self.current_player; // Place the piece
-                return Ok(());
+                return Ok((row, col));
             }
 
             // Allow placement directly above an obstacle
@@ -83,7 +83,7 @@ impl Game {
                 // Ensure this is the highest valid position
                 if row + 1 < self.rows && self.board[row + 1][col] == EMPTY {
                     self.board[row + 1][col] = self.current_player; // Place above the obstacle
-                    return Ok(());
+                    return Ok((row, col));
                 }
             }
         }
@@ -135,15 +135,15 @@ impl Game {
             0 => {
                 println!("Power-Up activated: Skip opponent's turn!");
                 self.skip_turn = true;
-            },
+            }
             1 => {
                 println!("Power-Up activated: Place obstacles!");
                 self.place_obstacles(row, col);
-            },
+            }
             2 => {
                 println!("Power-Up activated: Bomb triggered!");
                 self.use_bomb(row, col);
-             },
+            }
             _ => {}
         }
     }
@@ -161,7 +161,9 @@ impl Game {
                 let target_col = nc as usize;
 
                 // Place obstacle only if the cell is empty or occupied by the opponent's piece
-                if self.board[target_row][target_col] == EMPTY || self.board[target_row][target_col] != self.current_player {
+                if self.board[target_row][target_col] == EMPTY
+                    || self.board[target_row][target_col] != self.current_player
+                {
                     self.board[target_row][target_col] = OBSTACLE; // Place the obstacle
                 }
             }
