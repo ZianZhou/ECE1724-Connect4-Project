@@ -15,7 +15,6 @@ pub const OBSTACLE: char = '#'; // # represent the obstacle on the map
 
 pub static mut IF_EXPAND: bool = false;
 
-
 pub struct Game {
     board: Vec<Vec<char>>,
     // board: [[char; COLS]; ROWS],
@@ -51,7 +50,11 @@ impl Game {
         }
     }
 
-    pub fn drop_piece(&mut self, col: usize) -> Result<(), String> {
+    pub fn get_current_player(&self) -> char {
+        self.current_player
+    }
+
+    pub fn drop_piece(&mut self, col: usize) -> Result<(usize, usize), String> {
         if col >= self.cols {
             return Err("Invalid column.".to_string());
         }
