@@ -176,14 +176,15 @@ impl Game {
     // Power Up for Bombs (Clear the pieces between)
     pub fn use_bomb(&mut self, row: usize, col: usize) {
         if row > 0 {
-            // Clear the piece below the bomb
-            self.board[row - 1][col] = self.current_player;
-            // Drop the piece above to the bomb's position
+            // Clear the bomb and piece below the bomb
             self.board[row][col] = EMPTY;
+            self.board[row - 1][col] = EMPTY;
         }
         else if row==0{
-            self.board[0][col] = self.current_player;
+            self.board[0][col] = EMPTY;
         }
+        // let the user to place piece after bombs
+        self.skip_turn = true;
     }
 
     pub fn check_winner(&self) -> Option<char> {
