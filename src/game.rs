@@ -85,9 +85,9 @@ impl Game {
             // Allow placement on empty cells or Power-Ups
             if self.board[row][col] == EMPTY || ['B', 'S', 'H'].contains(&self.board[row][col]) {
                 // Ensure no piece is placed below an obstacle
-                if row > 0 && self.board[row - 1][col] == OBSTACLE && self.board[row][col] != EMPTY {
-                    return Err("Cannot place a piece below an obstacle.".to_string());
-                }
+                // if row > 0 && self.board[row - 1][col] == OBSTACLE && self.board[row][col] != EMPTY {
+                //     return Err("Cannot place a piece below an obstacle.".to_string());
+                // }
 
                 // Trigger Power-Up effect if applicable
                 if ['B', 'S', 'H'].contains(&self.board[row][col]) {
@@ -151,7 +151,6 @@ impl Game {
     }
 
     // Power Up for Placing Obstacles
-    // Power Up for Placing Obstacles
     pub fn place_obstacles(&mut self, row: usize, col: usize) {
         let deltas = [(0, -1), (0, 1)]; // Only consider left and right directions
         for (dr, dc) in deltas.iter() {
@@ -164,7 +163,7 @@ impl Game {
                 let target_col = nc as usize;
 
                 // Let the obstacle fall to the bottom or until it meets another piece
-                while target_row > 0 && self.board[target_row - 1][target_col] == EMPTY {
+                while target_row > 0 && (self.board[target_row - 1][target_col] == EMPTY || ['B', 'S', 'H'].contains(&self.board[target_row - 1][target_col])) {
                     target_row -= 1;
                 }
 
