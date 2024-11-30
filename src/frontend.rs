@@ -27,8 +27,8 @@ impl PowerUpType {
 
     fn color(&self) -> Color {
         match self {
-            Self::Bomb => Color::ORANGE,        // Bombs are orange
-            Self::Skip => Color::YELLOW,        // Skips are yellow
+            Self::Bomb => Color::PURPLE,        // Bombs are now purple
+            Self::Skip => Color::GREEN,         // Skips are now green
             Self::Obstacle => Color::DARK_GRAY, // Obstacle Power-Ups are dark gray
         }
     }
@@ -1070,7 +1070,7 @@ fn handle_power_up_activation(
                         commands.spawn((
                             SpriteBundle {
                                 sprite: Sprite {
-                                    color: Color::rgba(1.0, 0.5, 0.0, 1.0),
+                                    color: Color::PURPLE, // Changed to purple
                                     custom_size: Some(Vec2::new(50.0, 50.0)),
                                     ..default()
                                 },
@@ -1178,7 +1178,7 @@ fn flash_power_up(
             sprite.color = if sprite.color.a() == 1.0 {
                 Color::WHITE
             } else {
-                Color::ORANGE // Or any color indicating activation
+                Color::GREEN // Changed flashing color to green
             };
             // Remove Flashing after flashing
             commands.entity(entity).remove::<Flashing>();
@@ -1312,7 +1312,7 @@ pub fn main() {
                 animate_pieces,
                 handle_power_up_activation, // Updated handler with removal logic
                 explosion_animation,        // Explosion animation system
-                flash_power_up,             // Existing flashing system
+                flash_power_up,             // Updated flashing system
                 synchronize_frontend,       // Synchronization system
             )
                 .run_if(in_state(AppState::InGame)),
