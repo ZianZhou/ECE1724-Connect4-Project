@@ -584,38 +584,36 @@ fn update_game(
 
                 // Check if the board is full
                 if state.game.is_full() {
-                    unsafe {
-                        if !crate::game::IF_EXPAND {
-                            crate::game::IF_EXPAND = true;
-                            state.game.expand_board();
+                    if !state.game.expanded {
+                        state.game.expand_board();
+                        state.game.expanded = true;
 
-                            state.previous_rows = state.game.get_board().len();
-                            state.previous_cols = state.game.get_board()[0].len();
+                        state.previous_rows = state.game.get_board().len();
+                        state.previous_cols = state.game.get_board()[0].len();
 
-                            cleanup_game_board(&mut commands, &game_ui_query);
-                            render_game_board(&mut commands, &state, &asset_server);
+                        cleanup_game_board(&mut commands, &game_ui_query);
+                        render_game_board(&mut commands, &state, &asset_server);
 
-                            let (board_width, board_height) = get_board_dimensions(&state);
-                            adjust_camera(&mut camera_query, board_width, board_height);
+                        let (board_width, board_height) = get_board_dimensions(&state);
+                        adjust_camera(&mut camera_query, board_width, board_height);
 
-                            for row in 0..state.game.get_board().len() {
-                                for col in 0..state.game.get_board()[0].len() {
-                                    let player = state.game.get_board()[row][col];
-                                    if player != EMPTY && player != OBSTACLE {
-                                        spawn_existing_piece(
-                                            &mut commands,
-                                            &state.game,
-                                            row,
-                                            col,
-                                            &mut meshes,
-                                            &mut materials,
-                                        );
-                                    }
+                        for row in 0..state.game.get_board().len() {
+                            for col in 0..state.game.get_board()[0].len() {
+                                let player = state.game.get_board()[row][col];
+                                if player != EMPTY && player != OBSTACLE {
+                                    spawn_existing_piece(
+                                        &mut commands,
+                                        &state.game,
+                                        row,
+                                        col,
+                                        &mut meshes,
+                                        &mut materials,
+                                    );
                                 }
                             }
-
-                            return;
                         }
+
+                        return;
                     }
 
                     app_state.set(AppState::GameOver);
@@ -1282,7 +1280,7 @@ fn synchronize_frontend(
 }
 
 // Main function to set up the Bevy app
-pub fn main() {
+pub fn run() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
