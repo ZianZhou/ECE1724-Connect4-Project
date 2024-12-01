@@ -7,12 +7,11 @@ use bevy::render::mesh::shape::Circle;
 use bevy::sprite::{ColorMaterial, MaterialMesh2dBundle};
 use std::collections::HashSet;
 
-// Define PowerUpType with Bomb, Skip, and Obstacle Power-Ups
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PowerUpType {
-    Bomb,     // 'B'
-    Skip,     // 'S'
-    Obstacle, // 'H'
+    Bomb,
+    Skip,
+    Obstacle,
 }
 
 impl PowerUpType {
@@ -27,22 +26,21 @@ impl PowerUpType {
 
     fn color(&self) -> Color {
         match self {
-            Self::Bomb => Color::PURPLE,        // Bombs are now purple
-            Self::Skip => Color::GREEN,         // Skips are now green
-            Self::Obstacle => Color::DARK_GRAY, // Obstacle Power-Ups are dark gray
+            Self::Bomb => Color::PURPLE,
+            Self::Skip => Color::GREEN,
+            Self::Obstacle => Color::DARK_GRAY,
         }
     }
 
     fn label(&self) -> &'static str {
         match self {
-            Self::Bomb => "B",     // Bomb label
-            Self::Skip => "S",     // Skip label
-            Self::Obstacle => "H", // Obstacle Power-Up label
+            Self::Bomb => "B",
+            Self::Skip => "S",
+            Self::Obstacle => "H",
         }
     }
 }
 
-// Define application states
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default, States)]
 enum AppState {
     #[default]
@@ -51,15 +49,14 @@ enum AppState {
     GameOver,
 }
 
-// Define GameState resource
 #[derive(Resource)]
-struct GameState {
+struct GameStateResource {
     game: Game,
     previous_rows: usize,
     previous_cols: usize,
 }
 
-impl Default for GameState {
+impl Default for GameStateResource {
     fn default() -> Self {
         let game = Game::new();
         Self {
@@ -70,7 +67,6 @@ impl Default for GameState {
     }
 }
 
-// Define UI components
 #[derive(Component)]
 struct StartButton;
 
@@ -117,35 +113,29 @@ struct MainCamera;
 #[derive(Component)]
 struct Flashing;
 
-// New Component for Explosion Animation
 #[derive(Component)]
 struct Explosion {
     timer: Timer,
 }
 
-// New Component for Static Obstacles
 #[derive(Component)]
 struct StaticObstacle {
     row: usize,
     col: usize,
 }
 
-// Define PowerUpActivated event
 struct PowerUpActivated {
     row: usize,
     col: usize,
     power_up: PowerUpType,
 }
 
-// Implement the Event trait for PowerUpActivated
 impl Event for PowerUpActivated {}
 
-// Setup system to spawn the camera
 fn setup(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), MainCamera));
 }
 
-// Setup main menu UI
 fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn((
@@ -245,7 +235,6 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-// System to handle interactions with the Start button in the main menu
 fn main_menu_button_system(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
@@ -269,17 +258,15 @@ fn main_menu_button_system(
     }
 }
 
-// Cleanup system for the main menu
 fn cleanup_main_menu(mut commands: Commands, query: Query<Entity, With<MainMenuUI>>) {
     for entity in &query {
         commands.entity(entity).despawn_recursive();
     }
 }
 
-// Setup the game UI
 fn setup_game(
     mut commands: Commands,
-    mut state: ResMut<GameState>,
+    mut state: ResMut<GameStateResource>,
     asset_server: Res<AssetServer>,
     mut camera_query: Query<(&mut OrthographicProjection, &mut Transform), With<MainCamera>>,
 ) {
@@ -287,12 +274,11 @@ fn setup_game(
     state.previous_rows = state.game.get_board().len();
     state.previous_cols = state.game.get_board()[0].len();
 
-    // Background
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
-                color: Color::rgba(0.05, 0.05, 0.2, 0.5), // Semi-transparent for aesthetics
-                custom_size: Some(Vec2::new(800.0, 600.0)), // Adjusted size
+                color: Color::rgba(0.05, 0.05, 0.2, 0.5),
+                custom_size: Some(Vec2::new(800.0, 600.0)),
                 ..default()
             },
             transform: Transform::from_xyz(0.0, 0.0, -10.0),
@@ -301,30 +287,30 @@ fn setup_game(
         GameBackground,
     ));
 
-    // Render the game board
     render_game_board(&mut commands, &state, &asset_server);
 
-    // Adjust the camera based on the board size
     let (board_width, board_height) = get_board_dimensions(&state);
     adjust_camera(&mut camera_query, board_width, board_height);
 }
 
-// Define a color palette for column numbers (excluding blue and yellow)
 const COLUMN_COLORS: [Color; 10] = [
-    Color::RED,        // Column 1
-    Color::GREEN,      // Column 2
-    Color::PURPLE,     // Column 3
-    Color::ORANGE,     // Column 4
-    Color::PINK,       // Column 5
-    Color::TEAL,       // Column 6
-    Color::CYAN,       // Column 7
-    Color::LIME_GREEN, // Column 8
-    Color::INDIGO,     // Column 9
-    Color::VIOLET,     // Column 10
+    Color::RED,
+    Color::GREEN,
+    Color::PURPLE,
+    Color::ORANGE,
+    Color::PINK,
+    Color::TEAL,
+    Color::CYAN,
+    Color::LIME_GREEN,
+    Color::INDIGO,
+    Color::VIOLET,
 ];
 
-// Render the game board with cells, power-ups, and obstacles
-fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &Res<AssetServer>) {
+fn render_game_board(
+    commands: &mut Commands,
+    state: &GameStateResource,
+    asset_server: &Res<AssetServer>,
+) {
     let rows = state.game.get_board().len();
     let cols = state.game.get_board()[0].len();
 
@@ -333,7 +319,6 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
     let board_width = cols as f32 * (cell_size + padding) - padding;
     let board_height = rows as f32 * (cell_size + padding) - padding;
 
-    // Render the board background
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -350,7 +335,6 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
         GameUI,
     ));
 
-    // Render column labels with different colors
     for col in 0..cols {
         let label = if col < 9 {
             (col + 1).to_string()
@@ -358,11 +342,10 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
             "0".to_string()
         };
 
-        // Assign color based on column index
         let color = if col < COLUMN_COLORS.len() {
             COLUMN_COLORS[col]
         } else {
-            Color::GOLD // Default color if columns exceed predefined colors
+            Color::GOLD
         };
 
         commands.spawn((
@@ -372,7 +355,7 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                     TextStyle {
                         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 45.0,
-                        color, // Use the assigned color
+                        color,
                     },
                 ),
                 transform: Transform::from_xyz(
@@ -386,7 +369,6 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
         ));
     }
 
-    // Render turn indicator
     commands
         .spawn((
             NodeBundle {
@@ -413,7 +395,7 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                         TextStyle {
                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                             font_size: 50.0,
-                            color: Color::RED, // Player 1 is Red
+                            color: Color::RED,
                         },
                     )
                     .with_alignment(TextAlignment::Center),
@@ -423,7 +405,6 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
             ));
         });
 
-    // Render each cell on the board
     for row in 0..rows {
         for col in 0..cols {
             let cell_char = state.game.get_board()[row][col];
@@ -441,7 +422,7 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                         col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
                         row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
                             - 20.0,
-                        1.0, // Ensure cells are below pieces, power-ups, and obstacles
+                        1.0,
                     ),
                     ..default()
                 },
@@ -449,9 +430,7 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                 GameUI,
             ));
 
-            // Render power-ups if present
             if let Some(pu) = power_up {
-                // Render a colored circle behind the label
                 commands.spawn((
                     SpriteBundle {
                         sprite: Sprite {
@@ -465,14 +444,13 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                             row as f32 * (cell_size + padding) - board_height / 2.0
                                 + cell_size / 2.0
                                 - 20.0,
-                            1.5, // Render between cell and label
+                            1.5,
                         ),
                         ..default()
                     },
                     GameUI,
                 ));
 
-                // Render the power-up label
                 commands.spawn((
                     Text2dBundle {
                         text: Text::from_section(
@@ -489,7 +467,7 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                             row as f32 * (cell_size + padding) - board_height / 2.0
                                 + cell_size / 2.0
                                 - 20.0,
-                            2.0, // Render above the cell
+                            2.0,
                         ),
                         ..default()
                     },
@@ -497,12 +475,11 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                 ));
             }
 
-            // Render static obstacles if present
             if is_obstacle {
                 commands.spawn((
                     SpriteBundle {
                         sprite: Sprite {
-                            color: Color::BLACK, // Obstacles are black
+                            color: Color::BLACK,
                             custom_size: Some(Vec2::new(cell_size, cell_size)),
                             ..default()
                         },
@@ -512,11 +489,11 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
                             row as f32 * (cell_size + padding) - board_height / 2.0
                                 + cell_size / 2.0
                                 - 20.0,
-                            1.6, // Render above cells and power-ups
+                            1.6,
                         ),
                         ..default()
                     },
-                    StaticObstacle { row, col }, // Updated to include position
+                    StaticObstacle { row, col },
                     GameUI,
                 ));
             }
@@ -524,9 +501,8 @@ fn render_game_board(commands: &mut Commands, state: &GameState, asset_server: &
     }
 }
 
-// System to handle game updates based on player input
 fn update_game(
-    mut state: ResMut<GameState>,
+    mut state: ResMut<GameStateResource>,
     keyboard_input: Res<Input<KeyCode>>,
     mut app_state: ResMut<NextState<AppState>>,
     mut commands: Commands,
@@ -566,7 +542,6 @@ fn update_game(
                     &mut materials,
                 );
 
-                // Check if the dropped piece was on a power-up
                 let cell_char = state.game.get_board()[row][col];
                 if let Some(pu) = PowerUpType::from_char(cell_char) {
                     power_up_activated_events.send(PowerUpActivated {
@@ -576,13 +551,11 @@ fn update_game(
                     });
                 }
 
-                // Check for a winner
                 if let Some(_winner) = state.game.check_winner() {
                     app_state.set(AppState::GameOver);
                     return;
                 }
 
-                // Check if the board is full
                 if state.game.is_full() {
                     if !state.game.expanded {
                         state.game.expand_board();
@@ -620,10 +593,8 @@ fn update_game(
                     return;
                 }
 
-                // Switch player
                 state.game.switch_player();
 
-                // Update turn indicator
                 for mut text in &mut turn_query {
                     let player_number = if state.game.get_current_player() == PLAYER_X {
                         "1"
@@ -632,9 +603,9 @@ fn update_game(
                     };
                     text.sections[0].value = format!("Player {}'s Turn", player_number);
                     text.sections[0].style.color = if state.game.get_current_player() == PLAYER_X {
-                        Color::RED // Player 1 is Red
+                        Color::RED
                     } else {
-                        Color::YELLOW // Player 2 is Yellow
+                        Color::YELLOW
                     };
                 }
             } else {
@@ -646,7 +617,6 @@ fn update_game(
     }
 }
 
-// Function to spawn a new piece with animation
 fn spawn_piece(
     commands: &mut Commands,
     game: &Game,
@@ -657,11 +627,10 @@ fn spawn_piece(
 ) {
     let player = game.get_board()[row][col];
     if player == PLAYER_X || player == PLAYER_O {
-        // Ensure only player pieces are spawned
         let (color, z) = if player == PLAYER_X {
-            (Color::RED, 2.0) // Player 1 is Red
+            (Color::RED, 2.0)
         } else {
-            (Color::YELLOW, 2.0) // Player 2 is Yellow
+            (Color::YELLOW, 2.0)
         };
 
         let cell_size = 75.0;
@@ -686,7 +655,7 @@ fn spawn_piece(
                 ),
                 ..default()
             },
-            Piece { player, row, col }, // Assign row and col
+            Piece { player, row, col },
             AnimatePiece {
                 target_y: row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
                     - 20.0,
@@ -696,7 +665,6 @@ fn spawn_piece(
     }
 }
 
-// Function to spawn existing pieces when expanding the board
 fn spawn_existing_piece(
     commands: &mut Commands,
     game: &Game,
@@ -707,11 +675,10 @@ fn spawn_existing_piece(
 ) {
     let player = game.get_board()[row][col];
     if player == PLAYER_X || player == PLAYER_O {
-        // Ensure only player pieces are spawned
         let (color, z) = if player == PLAYER_X {
-            (Color::RED, 2.0) // Player 1 is Red
+            (Color::RED, 2.0)
         } else {
-            (Color::YELLOW, 2.0) // Player 2 is Yellow
+            (Color::YELLOW, 2.0)
         };
 
         let cell_size = 75.0;
@@ -737,13 +704,12 @@ fn spawn_existing_piece(
                 ),
                 ..default()
             },
-            Piece { player, row, col }, // Assign row and col
+            Piece { player, row, col },
             GameUI,
         ));
     }
 }
 
-// System to animate pieces dropping into place
 fn animate_pieces(
     mut query: Query<(Entity, &mut Transform, &AnimatePiece)>,
     time: Res<Time>,
@@ -760,14 +726,12 @@ fn animate_pieces(
     }
 }
 
-// Cleanup system for the game board
 fn cleanup_game_board(commands: &mut Commands, query: &Query<Entity, With<GameUI>>) {
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }
 }
 
-// Cleanup system for the entire game
 fn cleanup_game(
     mut commands: Commands,
     query: Query<Entity, With<GameUI>>,
@@ -782,8 +746,7 @@ fn cleanup_game(
     }
 }
 
-// Function to render the final board in the game over screen
-fn render_final_board(parent: &mut ChildBuilder, game_state: &GameState) {
+fn render_final_board(parent: &mut ChildBuilder, game_state: &GameStateResource) {
     let cell_size = 30.0;
     let margin = 1.0;
     let rows = game_state.game.get_board().len();
@@ -819,11 +782,11 @@ fn render_final_board(parent: &mut ChildBuilder, game_state: &GameState) {
 
                             let player = game_state.game.get_board()[row][col];
                             let piece_color = if player == PLAYER_X {
-                                Some(Color::RED) // Player 1 is Red
+                                Some(Color::RED)
                             } else if player == PLAYER_O {
-                                Some(Color::YELLOW) // Player 2 is Yellow
+                                Some(Color::YELLOW)
                             } else if player == OBSTACLE {
-                                Some(Color::BLACK) // Obstacles are Black
+                                Some(Color::BLACK)
                             } else {
                                 None
                             };
@@ -864,11 +827,10 @@ fn render_final_board(parent: &mut ChildBuilder, game_state: &GameState) {
         });
 }
 
-// Setup the game over screen
 fn setup_game_over(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    game_state: Res<GameState>,
+    game_state: Res<GameStateResource>,
 ) {
     let message = if let Some(winner) = game_state.game.check_winner() {
         let player_number = if winner == PLAYER_X { "1" } else { "2" };
@@ -979,7 +941,6 @@ fn setup_game_over(
         });
 }
 
-// System to handle interactions with the Main Menu button in the game over screen
 fn game_over_button_system(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor),
@@ -1003,15 +964,13 @@ fn game_over_button_system(
     }
 }
 
-// Cleanup system for the game over screen
 fn cleanup_game_over(mut commands: Commands, query: Query<Entity, With<GameOverUI>>) {
     for entity in &query {
         commands.entity(entity).despawn_recursive();
     }
 }
 
-// Function to get board dimensions based on the current game state
-fn get_board_dimensions(state: &GameState) -> (f32, f32) {
+fn get_board_dimensions(state: &GameStateResource) -> (f32, f32) {
     let rows = state.game.get_board().len();
     let cols = state.game.get_board()[0].len();
 
@@ -1023,7 +982,6 @@ fn get_board_dimensions(state: &GameState) -> (f32, f32) {
     (board_width, board_height)
 }
 
-// Function to adjust the camera based on the board size
 fn adjust_camera(
     camera_query: &mut Query<(&mut OrthographicProjection, &mut Transform), With<MainCamera>>,
     board_width: f32,
@@ -1033,7 +991,6 @@ fn adjust_camera(
         let desired_width = board_width + 200.0;
         let desired_height = board_height + 200.0;
 
-        // Use FixedVertical scaling mode with desired_height
         ortho.scaling_mode = ScalingMode::FixedVertical(desired_height);
 
         ortho.area = Rect {
@@ -1045,7 +1002,6 @@ fn adjust_camera(
     }
 }
 
-// System to handle power-up activation events
 fn handle_power_up_activation(
     mut events: EventReader<PowerUpActivated>,
     mut commands: Commands,
@@ -1053,14 +1009,13 @@ fn handle_power_up_activation(
     piece_query: Query<(Entity, &Piece), With<Piece>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    state: Res<GameState>, // Added to get board dimensions
+    state: Res<GameStateResource>,
 ) {
     for event in events.iter() {
         for (entity, cell) in query.iter() {
             if cell.row == event.row && cell.col == event.col {
                 match event.power_up {
                     PowerUpType::Bomb => {
-                        // Spawn explosion animation at the bomb's location
                         let (board_width, board_height) = get_board_dimensions(&state);
                         let cell_size = 75.0;
                         let padding = 7.5;
@@ -1068,7 +1023,7 @@ fn handle_power_up_activation(
                         commands.spawn((
                             SpriteBundle {
                                 sprite: Sprite {
-                                    color: Color::PURPLE, // Changed to purple
+                                    color: Color::PURPLE,
                                     custom_size: Some(Vec2::new(50.0, 50.0)),
                                     ..default()
                                 },
@@ -1078,7 +1033,7 @@ fn handle_power_up_activation(
                                     cell.row as f32 * (cell_size + padding) - board_height / 2.0
                                         + cell_size / 2.0
                                         - 20.0,
-                                    3.0, // Ensure explosion is on top
+                                    3.0,
                                 ),
                                 ..default()
                             },
@@ -1088,15 +1043,12 @@ fn handle_power_up_activation(
                             GameUI,
                         ));
 
-                        // Determine the position of the piece to remove (e.g., below the bomb)
                         if cell.row > 0 {
                             let target_row = cell.row - 1;
                             let target_col = cell.col;
 
-                            // Find the piece entity at (target_row, target_col)
                             for (piece_entity, piece) in piece_query.iter() {
                                 if piece.row == target_row && piece.col == target_col {
-                                    // Despawn the piece
                                     commands.entity(piece_entity).despawn();
                                     break;
                                 }
@@ -1104,12 +1056,9 @@ fn handle_power_up_activation(
                         }
                     }
                     PowerUpType::Skip => {
-                        // Handle skip turn animation or indication if needed
-                        // Currently handled by flashing effect
                         commands.entity(entity).insert(Flashing);
                     }
                     PowerUpType::Obstacle => {
-                        // Handle obstacle placement
                         let (board_width, board_height) = get_board_dimensions(&state);
                         let cell_size = 75.0;
                         let padding = 7.5;
@@ -1117,7 +1066,7 @@ fn handle_power_up_activation(
                         commands.spawn((
                             SpriteBundle {
                                 sprite: Sprite {
-                                    color: Color::BLACK, // Obstacles are black
+                                    color: Color::BLACK,
                                     custom_size: Some(Vec2::new(cell_size, cell_size)),
                                     ..default()
                                 },
@@ -1127,14 +1076,14 @@ fn handle_power_up_activation(
                                     cell.row as f32 * (cell_size + padding) - board_height / 2.0
                                         + cell_size / 2.0
                                         - 20.0,
-                                    1.6, // Render above cells and power-ups
+                                    1.6,
                                 ),
                                 ..default()
                             },
                             StaticObstacle {
                                 row: cell.row,
                                 col: cell.col,
-                            }, // Include position
+                            },
                             GameUI,
                         ));
                     }
@@ -1144,7 +1093,6 @@ fn handle_power_up_activation(
     }
 }
 
-// System to handle explosion animations
 fn explosion_animation(
     mut commands: Commands,
     time: Res<Time>,
@@ -1153,7 +1101,6 @@ fn explosion_animation(
     for (entity, mut explosion, mut sprite) in query.iter_mut() {
         explosion.timer.tick(time.delta());
 
-        // Simple scaling effect for explosion
         let scale_factor = 1.0 + (0.5 * explosion.timer.elapsed_secs());
         sprite.custom_size = Some(Vec2::splat(50.0 * scale_factor));
 
@@ -1163,7 +1110,6 @@ fn explosion_animation(
     }
 }
 
-// System to handle flashing effect for activated power-ups
 fn flash_power_up(
     mut query: Query<(Entity, &mut Sprite), With<Flashing>>,
     time: Res<Time>,
@@ -1176,18 +1122,16 @@ fn flash_power_up(
             sprite.color = if sprite.color.a() == 1.0 {
                 Color::WHITE
             } else {
-                Color::GREEN // Changed flashing color to green
+                Color::GREEN
             };
-            // Remove Flashing after flashing
             commands.entity(entity).remove::<Flashing>();
         }
         *timer = 0.0;
     }
 }
 
-// System to handle synchronization of frontend with backend game state
 fn synchronize_frontend(
-    state: Res<GameState>,
+    state: Res<GameStateResource>,
     mut commands: Commands,
     existing_pieces: Query<(Entity, &Piece), With<Piece>>,
     existing_obstacles: Query<(Entity, &StaticObstacle), With<StaticObstacle>>,
@@ -1196,7 +1140,6 @@ fn synchronize_frontend(
 ) {
     let board = state.game.get_board();
 
-    // Synchronize Player Pieces
     let mut required_piece_positions = HashSet::new();
     for (row, row_cells) in board.iter().enumerate() {
         for (col, &cell) in row_cells.iter().enumerate() {
@@ -1206,17 +1149,14 @@ fn synchronize_frontend(
         }
     }
 
-    // Despawn pieces not present on the board
     for (entity, piece) in existing_pieces.iter() {
         if !required_piece_positions.contains(&(piece.row, piece.col)) {
             commands.entity(entity).despawn();
         } else {
-            // Remove the position as it's already rendered
             required_piece_positions.remove(&(piece.row, piece.col));
         }
     }
 
-    // Spawn missing player pieces
     for &(row, col) in &required_piece_positions {
         let cell_char = board[row][col];
         spawn_piece(
@@ -1229,7 +1169,6 @@ fn synchronize_frontend(
         );
     }
 
-    // Synchronize Obstacles
     let mut required_obstacle_positions = HashSet::new();
     for (row, row_cells) in board.iter().enumerate() {
         for (col, &cell) in row_cells.iter().enumerate() {
@@ -1239,19 +1178,15 @@ fn synchronize_frontend(
         }
     }
 
-    // Despawn obstacles not present on the board
     for (entity, obstacle) in existing_obstacles.iter() {
         if !required_obstacle_positions.contains(&(obstacle.row, obstacle.col)) {
             commands.entity(entity).despawn();
         } else {
-            // Remove the position as it's already rendered
             required_obstacle_positions.remove(&(obstacle.row, obstacle.col));
         }
     }
 
-    // Spawn missing obstacles
     for &(row, col) in &required_obstacle_positions {
-        // Spawn obstacle
         let cell_size = 75.0;
         let padding = 7.5;
         let board_dimensions = get_board_dimensions(&state);
@@ -1261,7 +1196,7 @@ fn synchronize_frontend(
         commands.spawn((
             SpriteBundle {
                 sprite: Sprite {
-                    color: Color::BLACK, // Obstacles are black
+                    color: Color::BLACK,
                     custom_size: Some(Vec2::new(cell_size, cell_size)),
                     ..default()
                 },
@@ -1269,17 +1204,16 @@ fn synchronize_frontend(
                     col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
                     row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
                         - 20.0,
-                    1.6, // Render above cells and power-ups
+                    1.6,
                 ),
                 ..default()
             },
-            StaticObstacle { row, col }, // Include position
+            StaticObstacle { row, col },
             GameUI,
         ));
     }
 }
 
-// Main function to set up the Bevy app
 pub fn run() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -1292,8 +1226,8 @@ pub fn run() {
             ..default()
         }))
         .insert_resource(ClearColor(Color::rgb(0.05, 0.05, 0.2)))
-        .insert_resource(GameState::default())
-        .add_event::<PowerUpActivated>() // Register the event
+        .insert_resource(GameStateResource::default())
+        .add_event::<PowerUpActivated>()
         .add_state::<AppState>()
         .add_systems(Startup, setup)
         .add_systems(OnEnter(AppState::MainMenu), setup_main_menu)
@@ -1308,10 +1242,10 @@ pub fn run() {
             (
                 update_game,
                 animate_pieces,
-                handle_power_up_activation, // Updated handler with removal logic
-                explosion_animation,        // Explosion animation system
-                flash_power_up,             // Updated flashing system
-                synchronize_frontend,       // Synchronization system
+                handle_power_up_activation,
+                explosion_animation,
+                flash_power_up,
+                synchronize_frontend,
             )
                 .run_if(in_state(AppState::InGame)),
         )
