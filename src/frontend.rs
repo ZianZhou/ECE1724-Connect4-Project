@@ -329,7 +329,7 @@ fn render_game_board(
                 )),
                 ..default()
             },
-            transform: Transform::from_xyz(0.0, -20.0, 0.0),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..default()
         },
         GameUI,
@@ -420,8 +420,7 @@ fn render_game_board(
                     },
                     transform: Transform::from_xyz(
                         col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
-                            - 20.0,
+                        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
                         1.0,
                     ),
                     ..default()
@@ -442,8 +441,7 @@ fn render_game_board(
                             col as f32 * (cell_size + padding) - board_width / 2.0
                                 + cell_size / 2.0,
                             row as f32 * (cell_size + padding) - board_height / 2.0
-                                + cell_size / 2.0
-                                - 20.0,
+                                + cell_size / 2.0,
                             1.5,
                         ),
                         ..default()
@@ -465,8 +463,7 @@ fn render_game_board(
                             col as f32 * (cell_size + padding) - board_width / 2.0
                                 + cell_size / 2.0,
                             row as f32 * (cell_size + padding) - board_height / 2.0
-                                + cell_size / 2.0
-                                - 20.0,
+                                + cell_size / 2.0,
                             2.0,
                         ),
                         ..default()
@@ -487,8 +484,7 @@ fn render_game_board(
                             col as f32 * (cell_size + padding) - board_width / 2.0
                                 + cell_size / 2.0,
                             row as f32 * (cell_size + padding) - board_height / 2.0
-                                + cell_size / 2.0
-                                - 20.0,
+                                + cell_size / 2.0,
                             1.6,
                         ),
                         ..default()
@@ -533,29 +529,7 @@ fn update_game(
 
         if keyboard_input.just_pressed(key) {
             if let Ok((row, col)) = state.game.drop_piece(col) {
-                spawn_piece(
-                    &mut commands,
-                    &state.game,
-                    row,
-                    col,
-                    &mut meshes,
-                    &mut materials,
-                );
-
-                let cell_char = state.game.get_board()[row][col];
-                if let Some(pu) = PowerUpType::from_char(cell_char) {
-                    power_up_activated_events.send(PowerUpActivated {
-                        row,
-                        col,
-                        power_up: pu,
-                    });
-                }
-
-                if let Some(_winner) = state.game.check_winner() {
-                    app_state.set(AppState::GameOver);
-                    return;
-                }
-
+                // Check if the board is full after dropping the piece
                 if state.game.is_full() {
                     if !state.game.expanded {
                         state.game.expand_board();
@@ -570,6 +544,7 @@ fn update_game(
                         let (board_width, board_height) = get_board_dimensions(&state);
                         adjust_camera(&mut camera_query, board_width, board_height);
 
+                        // Re-spawn existing pieces
                         for row in 0..state.game.get_board().len() {
                             for col in 0..state.game.get_board()[0].len() {
                                 let player = state.game.get_board()[row][col];
@@ -586,15 +561,86 @@ fn update_game(
                             }
                         }
 
+                        // Now, spawn the last piece using the updated board dimensions
+                        spawn_piece(
+                            &mut commands,
+                            &state.game,
+                            row,
+                            col,
+                            &mut meshes,
+                            &mut materials,
+                        );
+
+                        // Since the board has just expanded, we need to handle power-ups and check for a winner again
+                        let cell_char = state.game.get_board()[row][col];
+                        if let Some(pu) = PowerUpType::from_char(cell_char) {
+                            power_up_activated_events.send(PowerUpActivated {
+                                row,
+                                col,
+                                power_up: pu,
+                            });
+                        }
+
+                        if let Some(_winner) = state.game.check_winner() {
+                            app_state.set(AppState::GameOver);
+                            return;
+                        }
+
+                        // Switch player
+                        state.game.switch_player();
+
+                        // Update turn indicator
+                        for mut text in &mut turn_query {
+                            let player_number = if state.game.get_current_player() == PLAYER_X {
+                                "1"
+                            } else {
+                                "2"
+                            };
+                            text.sections[0].value = format!("Player {}'s Turn", player_number);
+                            text.sections[0].style.color =
+                                if state.game.get_current_player() == PLAYER_X {
+                                    Color::RED
+                                } else {
+                                    Color::YELLOW
+                                };
+                        }
+
                         return;
                     }
 
                     app_state.set(AppState::GameOver);
                     return;
+                } else {
+                    // Spawn the piece normally if the board isn't full
+                    spawn_piece(
+                        &mut commands,
+                        &state.game,
+                        row,
+                        col,
+                        &mut meshes,
+                        &mut materials,
+                    );
                 }
 
+                // Handle power-up activation
+                let cell_char = state.game.get_board()[row][col];
+                if let Some(pu) = PowerUpType::from_char(cell_char) {
+                    power_up_activated_events.send(PowerUpActivated {
+                        row,
+                        col,
+                        power_up: pu,
+                    });
+                }
+
+                if let Some(_winner) = state.game.check_winner() {
+                    app_state.set(AppState::GameOver);
+                    return;
+                }
+
+                // Switch player
                 state.game.switch_player();
 
+                // Update turn indicator
                 for mut text in &mut turn_query {
                     let player_number = if state.game.get_current_player() == PLAYER_X {
                         "1"
@@ -657,8 +703,7 @@ fn spawn_piece(
             },
             Piece { player, row, col },
             AnimatePiece {
-                target_y: row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
-                    - 20.0,
+                target_y: row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
             },
             GameUI,
         ));
@@ -698,8 +743,7 @@ fn spawn_existing_piece(
                 material: material_handle,
                 transform: Transform::from_xyz(
                     col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                    row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
-                        - 20.0,
+                    row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
                     z,
                 ),
                 ..default()
@@ -1031,8 +1075,7 @@ fn handle_power_up_activation(
                                     cell.col as f32 * (cell_size + padding) - board_width / 2.0
                                         + cell_size / 2.0,
                                     cell.row as f32 * (cell_size + padding) - board_height / 2.0
-                                        + cell_size / 2.0
-                                        - 20.0,
+                                        + cell_size / 2.0,
                                     3.0,
                                 ),
                                 ..default()
@@ -1074,8 +1117,7 @@ fn handle_power_up_activation(
                                     cell.col as f32 * (cell_size + padding) - board_width / 2.0
                                         + cell_size / 2.0,
                                     cell.row as f32 * (cell_size + padding) - board_height / 2.0
-                                        + cell_size / 2.0
-                                        - 20.0,
+                                        + cell_size / 2.0,
                                     1.6,
                                 ),
                                 ..default()
@@ -1202,8 +1244,7 @@ fn synchronize_frontend(
                 },
                 transform: Transform::from_xyz(
                     col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                    row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
-                        - 20.0,
+                    row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
                     1.6,
                 ),
                 ..default()
