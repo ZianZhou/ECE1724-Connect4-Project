@@ -1,11 +1,11 @@
-use crate::game::{Game, EMPTY, OBSTACLE, PLAYER_O, PLAYER_X};
+use crate::game::{Game, OBSTACLE, PLAYER_O, PLAYER_X};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::render::mesh::shape::Circle;
 use bevy::sprite::{ColorMaterial, MaterialMesh2dBundle};
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum PowerUpType {
     Bomb,
     Skip,
@@ -127,6 +127,12 @@ struct StaticObstacle {
 #[derive(Component)]
 struct PowerUpsToggleButton(bool);
 
+#[derive(Component)]
+struct PowerUpSymbol {
+    row: usize,
+    col: usize,
+}
+
 struct PowerUpActivated {
     row: usize,
     col: usize,
@@ -157,20 +163,18 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
             MainMenuUI,
         ))
         .with_children(|parent| {
-            parent.spawn(
-                TextBundle {
-                    text: Text::from_section(
-                        "Rusty Connect Four",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 60.0,
-                            color: Color::GOLD,
-                        },
-                    )
-                    .with_alignment(TextAlignment::Center),
-                    ..default()
-                },
-            );
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    "Rusty Connect Four",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 60.0,
+                        color: Color::GOLD,
+                    },
+                )
+                .with_alignment(TextAlignment::Center),
+                ..default()
+            });
 
             parent.spawn(NodeBundle {
                 style: Style {
@@ -180,20 +184,18 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             });
 
-            parent.spawn(
-                TextBundle {
-                    text: Text::from_section(
-                        "Use number keys 1-0 to drop pieces into columns.\nFirst to connect four in a row wins!",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Regular.ttf"),
-                            font_size: 30.0,
-                            color: Color::WHITE,
-                        },
-                    )
-                    .with_alignment(TextAlignment::Center),
-                    ..default()
-                },
-            );
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    "Use number keys 1-0 to drop pieces into columns.\nFirst to connect four in a row wins!",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Regular.ttf"),
+                        font_size: 30.0,
+                        color: Color::WHITE,
+                    },
+                )
+                .with_alignment(TextAlignment::Center),
+                ..default()
+            });
 
             parent.spawn(NodeBundle {
                 style: Style {
@@ -203,24 +205,24 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             });
 
-            parent.spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(300.0),
-                        height: Val::Px(50.0),
-                        margin: UiRect::all(Val::Px(10.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(300.0),
+                            height: Val::Px(50.0),
+                            margin: UiRect::all(Val::Px(10.0)),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        background_color: Color::GRAY.into(),
                         ..default()
                     },
-                    background_color: Color::GRAY.into(),
-                    ..default()
-                },
-                PowerUpsToggleButton(false),
-            ))
-            .with_children(|button| {
-                button.spawn(
-                    TextBundle {
+                    PowerUpsToggleButton(false),
+                ))
+                .with_children(|button| {
+                    button.spawn(TextBundle {
                         text: Text::from_section(
                             "Power-ups: OFF",
                             TextStyle {
@@ -231,28 +233,27 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                         )
                         .with_alignment(TextAlignment::Center),
                         ..default()
-                    },
-                );
-            });
+                    });
+                });
 
-            parent.spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(200.0),
-                        height: Val::Px(65.0),
-                        margin: UiRect::all(Val::Px(10.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(200.0),
+                            height: Val::Px(65.0),
+                            margin: UiRect::all(Val::Px(10.0)),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        background_color: Color::rgb(0.15, 0.65, 0.15).into(),
                         ..default()
                     },
-                    background_color: Color::rgb(0.15, 0.65, 0.15).into(),
-                    ..default()
-                },
-                StartButton,
-            ))
-            .with_children(|button| {
-                button.spawn(
-                    TextBundle {
+                    StartButton,
+                ))
+                .with_children(|button| {
+                    button.spawn(TextBundle {
                         text: Text::from_section(
                             "Start",
                             TextStyle {
@@ -263,9 +264,8 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                         )
                         .with_alignment(TextAlignment::Center),
                         ..default()
-                    },
-                );
-            });
+                    });
+                });
         });
 }
 
@@ -355,6 +355,8 @@ fn setup_game(
     mut state: ResMut<GameStateResource>,
     asset_server: Res<AssetServer>,
     mut camera_query: Query<(&mut OrthographicProjection, &mut Transform), With<MainCamera>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     state.game = Game::new(state.power_ups_enabled);
     state.previous_rows = state.game.get_board().len();
@@ -373,7 +375,13 @@ fn setup_game(
         GameBackground,
     ));
 
-    render_game_board(&mut commands, &state, &asset_server);
+    render_game_board(
+        &mut commands,
+        &state,
+        &asset_server,
+        &mut meshes,
+        &mut materials,
+    );
 
     let (board_width, board_height) = get_board_dimensions(&state);
     adjust_camera(&mut camera_query, board_width, board_height);
@@ -396,6 +404,8 @@ fn render_game_board(
     commands: &mut Commands,
     state: &GameStateResource,
     asset_server: &Res<AssetServer>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
 ) {
     let rows = state.game.get_board().len();
     let cols = state.game.get_board()[0].len();
@@ -516,70 +526,128 @@ fn render_game_board(
             ));
 
             if let Some(pu) = power_up {
-                commands.spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            color: pu.color(),
-                            custom_size: Some(Vec2::new(cell_size / 2.0, cell_size / 2.0)),
-                            ..default()
-                        },
-                        transform: Transform::from_xyz(
-                            col as f32 * (cell_size + padding) - board_width / 2.0
-                                + cell_size / 2.0,
-                            row as f32 * (cell_size + padding) - board_height / 2.0
-                                + cell_size / 2.0,
-                            1.5,
-                        ),
-                        ..default()
-                    },
-                    GameUI,
-                ));
-
-                commands.spawn((
-                    Text2dBundle {
-                        text: Text::from_section(
-                            pu.label(),
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
-                            },
-                        ),
-                        transform: Transform::from_xyz(
-                            col as f32 * (cell_size + padding) - board_width / 2.0
-                                + cell_size / 2.0,
-                            row as f32 * (cell_size + padding) - board_height / 2.0
-                                + cell_size / 2.0,
-                            2.0,
-                        ),
-                        ..default()
-                    },
-                    GameUI,
-                ));
+                spawn_power_up_symbol(
+                    commands,
+                    row,
+                    col,
+                    pu,
+                    cell_size,
+                    padding,
+                    board_width,
+                    board_height,
+                    asset_server,
+                );
             }
 
             if is_obstacle {
-                commands.spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            color: Color::BLACK,
-                            custom_size: Some(Vec2::new(cell_size, cell_size)),
-                            ..default()
-                        },
-                        transform: Transform::from_xyz(
-                            col as f32 * (cell_size + padding) - board_width / 2.0
-                                + cell_size / 2.0,
-                            row as f32 * (cell_size + padding) - board_height / 2.0
-                                + cell_size / 2.0,
-                            1.6,
-                        ),
-                        ..default()
-                    },
-                    StaticObstacle { row, col },
-                    GameUI,
-                ));
+                spawn_obstacle(
+                    commands,
+                    row,
+                    col,
+                    cell_size,
+                    padding,
+                    board_width,
+                    board_height,
+                    &mut Some(AnimatePiece {
+                        target_y: row as f32 * (cell_size + padding) - board_height / 2.0
+                            + cell_size / 2.0,
+                    }),
+                );
             }
         }
+    }
+}
+
+fn spawn_power_up_symbol(
+    commands: &mut Commands,
+    row: usize,
+    col: usize,
+    pu: PowerUpType,
+    cell_size: f32,
+    padding: f32,
+    board_width: f32,
+    board_height: f32,
+    asset_server: &Res<AssetServer>,
+) {
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: pu.color(),
+                custom_size: Some(Vec2::new(cell_size / 2.0, cell_size / 2.0)),
+                ..default()
+            },
+            transform: Transform::from_xyz(
+                col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
+                row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
+                1.5,
+            ),
+            ..default()
+        },
+        PowerUpSymbol { row, col },
+        GameUI,
+    ));
+
+    commands.spawn((
+        Text2dBundle {
+            text: Text::from_section(
+                pu.label(),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 30.0,
+                    color: Color::WHITE,
+                },
+            ),
+            transform: Transform::from_xyz(
+                col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
+                row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
+                2.0,
+            ),
+            ..default()
+        },
+        PowerUpSymbol { row, col },
+        GameUI,
+    ));
+}
+
+fn spawn_obstacle(
+    commands: &mut Commands,
+    row: usize,
+    col: usize,
+    cell_size: f32,
+    padding: f32,
+    board_width: f32,
+    board_height: f32,
+    animate_piece: &mut Option<AnimatePiece>,
+) {
+    let z = 2.0;
+    let initial_y = if animate_piece.is_some() {
+        board_height / 2.0 + cell_size
+    } else {
+        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
+    };
+
+    let transform = Transform::from_xyz(
+        col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
+        initial_y,
+        z,
+    );
+
+    let mut entity_commands = commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::BLACK,
+                custom_size: Some(Vec2::new(cell_size, cell_size)),
+                ..default()
+            },
+            transform,
+            ..default()
+        },
+        StaticObstacle { row, col },
+        GameUI,
+    ));
+
+    if let Some(animate) = animate_piece.take() {
+        entity_commands.insert(animate);
     }
 }
 
@@ -615,6 +683,8 @@ fn update_game(
 
         if keyboard_input.just_pressed(key) {
             if let Ok((row, col)) = state.game.drop_piece(col) {
+                let player = state.game.get_current_player();
+
                 if state.game.is_full() {
                     if !state.game.expanded {
                         state.game.expand_board();
@@ -624,15 +694,24 @@ fn update_game(
                         state.previous_cols = state.game.get_board()[0].len();
 
                         cleanup_game_board(&mut commands, &game_ui_query);
-                        render_game_board(&mut commands, &state, &asset_server);
+                        render_game_board(
+                            &mut commands,
+                            &state,
+                            &asset_server,
+                            &mut meshes,
+                            &mut materials,
+                        );
 
                         let (board_width, board_height) = get_board_dimensions(&state);
                         adjust_camera(&mut camera_query, board_width, board_height);
 
                         for row in 0..state.game.get_board().len() {
                             for col in 0..state.game.get_board()[0].len() {
-                                let player = state.game.get_board()[row][col];
-                                if player != EMPTY && player != OBSTACLE {
+                                let cell_char = state.game.get_board()[row][col];
+                                if cell_char == PLAYER_X
+                                    || cell_char == PLAYER_O
+                                    || cell_char == OBSTACLE
+                                {
                                     spawn_existing_piece(
                                         &mut commands,
                                         &state.game,
@@ -652,11 +731,12 @@ fn update_game(
                 } else {
                     spawn_piece(
                         &mut commands,
-                        &state.game,
+                        player,
                         row,
                         col,
                         &mut meshes,
                         &mut materials,
+                        &state,
                     );
                 }
 
@@ -700,29 +780,28 @@ fn update_game(
 
 fn spawn_piece(
     commands: &mut Commands,
-    game: &Game,
+    player: char,
     row: usize,
     col: usize,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
+    state: &GameStateResource,
 ) {
-    let player = game.get_board()[row][col];
     if player == PLAYER_X || player == PLAYER_O {
         let (color, z) = if player == PLAYER_X {
-            (Color::RED, 2.0)
+            (Color::RED, 1.9)
         } else {
-            (Color::YELLOW, 2.0)
+            (Color::YELLOW, 1.9)
         };
 
         let cell_size = 75.0;
         let padding = 7.5;
-        let cols = game.get_board()[0].len();
-        let rows = game.get_board().len();
+        let cols = state.game.get_board()[0].len();
+        let rows = state.game.get_board().len();
         let board_width = cols as f32 * (cell_size + padding) - padding;
         let board_height = rows as f32 * (cell_size + padding) - padding;
 
         let circle_mesh = meshes.add(Mesh::from(Circle::new(cell_size / 2.0 - 5.0)));
-
         let material_handle = materials.add(ColorMaterial::from(color));
 
         commands.spawn((
@@ -753,39 +832,56 @@ fn spawn_existing_piece(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
 ) {
-    let player = game.get_board()[row][col];
-    if player == PLAYER_X || player == PLAYER_O {
-        let (color, z) = if player == PLAYER_X {
-            (Color::RED, 2.0)
+    let cell_char = game.get_board()[row][col];
+    let cell_size = 75.0;
+    let padding = 7.5;
+    let cols = game.get_board()[0].len();
+    let rows = game.get_board().len();
+    let board_width = cols as f32 * (cell_size + padding) - padding;
+    let board_height = rows as f32 * (cell_size + padding) - padding;
+    let initial_y = board_height / 2.0 + cell_size;
+    let target_y = row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0;
+
+    let x_position = col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0;
+
+    if cell_char == PLAYER_X || cell_char == PLAYER_O {
+        let color = if cell_char == PLAYER_X {
+            Color::RED
         } else {
-            (Color::YELLOW, 2.0)
+            Color::YELLOW
         };
 
-        let cell_size = 75.0;
-        let padding = 7.5;
-        let cols = game.get_board()[0].len();
-        let rows = game.get_board().len();
-        let board_width = cols as f32 * (cell_size + padding) - padding;
-        let board_height = rows as f32 * (cell_size + padding) - padding;
-
         let circle_mesh = meshes.add(Mesh::from(Circle::new(cell_size / 2.0 - 5.0)));
-
         let material_handle = materials.add(ColorMaterial::from(color));
 
         commands.spawn((
             MaterialMesh2dBundle {
                 mesh: circle_mesh.into(),
                 material: material_handle,
-                transform: Transform::from_xyz(
-                    col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                    row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
-                    z,
-                ),
+                transform: Transform::from_xyz(x_position, initial_y, 1.9),
                 ..default()
             },
-            Piece { player, row, col },
+            Piece {
+                player: cell_char,
+                row,
+                col,
+            },
+            AnimatePiece { target_y },
             GameUI,
         ));
+    }
+
+    if cell_char == OBSTACLE {
+        spawn_obstacle(
+            commands,
+            row,
+            col,
+            cell_size,
+            padding,
+            board_width,
+            board_height,
+            &mut None,
+        );
     }
 }
 
@@ -1086,11 +1182,16 @@ fn handle_power_up_activation(
     mut commands: Commands,
     query: Query<(Entity, &Cell), With<Cell>>,
     piece_query: Query<(Entity, &Piece), With<Piece>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    power_up_query: Query<(Entity, &PowerUpSymbol)>,
     state: Res<GameStateResource>,
 ) {
     for event in events.iter() {
+        for (entity, symbol) in power_up_query.iter() {
+            if symbol.row == event.row && symbol.col == event.col {
+                commands.entity(entity).despawn_recursive();
+            }
+        }
+
         for (entity, cell) in query.iter() {
             if cell.row == event.row && cell.col == event.col {
                 match event.power_up {
@@ -1141,28 +1242,20 @@ fn handle_power_up_activation(
                         let cell_size = 75.0;
                         let padding = 7.5;
 
-                        commands.spawn((
-                            SpriteBundle {
-                                sprite: Sprite {
-                                    color: Color::BLACK,
-                                    custom_size: Some(Vec2::new(cell_size, cell_size)),
-                                    ..default()
-                                },
-                                transform: Transform::from_xyz(
-                                    cell.col as f32 * (cell_size + padding) - board_width / 2.0
-                                        + cell_size / 2.0,
-                                    cell.row as f32 * (cell_size + padding) - board_height / 2.0
-                                        + cell_size / 2.0,
-                                    1.6,
-                                ),
-                                ..default()
-                            },
-                            StaticObstacle {
-                                row: cell.row,
-                                col: cell.col,
-                            },
-                            GameUI,
-                        ));
+                        spawn_obstacle(
+                            &mut commands,
+                            cell.row,
+                            cell.col,
+                            cell_size,
+                            padding,
+                            board_width,
+                            board_height,
+                            &mut Some(AnimatePiece {
+                                target_y: cell.row as f32 * (cell_size + padding)
+                                    - board_height / 2.0
+                                    + cell_size / 2.0,
+                            }),
+                        );
                     }
                 }
             }
@@ -1212,16 +1305,23 @@ fn synchronize_frontend(
     mut commands: Commands,
     existing_pieces: Query<(Entity, &Piece), With<Piece>>,
     existing_obstacles: Query<(Entity, &StaticObstacle), With<StaticObstacle>>,
+    existing_power_ups: Query<(Entity, &PowerUpSymbol)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     let board = state.game.get_board();
 
     let mut required_piece_positions = HashSet::new();
+    let mut required_obstacle_positions = HashSet::new();
+
     for (row, row_cells) in board.iter().enumerate() {
         for (col, &cell) in row_cells.iter().enumerate() {
             if cell == PLAYER_X || cell == PLAYER_O {
                 required_piece_positions.insert((row, col));
+            }
+            if cell == OBSTACLE {
+                required_obstacle_positions.insert((row, col));
             }
         }
     }
@@ -1234,8 +1334,12 @@ fn synchronize_frontend(
         }
     }
 
+    for (entity, obstacle) in existing_obstacles.iter() {
+        required_obstacle_positions.remove(&(obstacle.row, obstacle.col));
+    }
+
     for &(row, col) in &required_piece_positions {
-        spawn_piece(
+        spawn_existing_piece(
             &mut commands,
             &state.game,
             row,
@@ -1245,23 +1349,6 @@ fn synchronize_frontend(
         );
     }
 
-    let mut required_obstacle_positions = HashSet::new();
-    for (row, row_cells) in board.iter().enumerate() {
-        for (col, &cell) in row_cells.iter().enumerate() {
-            if cell == OBSTACLE {
-                required_obstacle_positions.insert((row, col));
-            }
-        }
-    }
-
-    for (entity, obstacle) in existing_obstacles.iter() {
-        if !required_obstacle_positions.contains(&(obstacle.row, obstacle.col)) {
-            commands.entity(entity).despawn();
-        } else {
-            required_obstacle_positions.remove(&(obstacle.row, obstacle.col));
-        }
-    }
-
     for &(row, col) in &required_obstacle_positions {
         let cell_size = 75.0;
         let padding = 7.5;
@@ -1269,23 +1356,62 @@ fn synchronize_frontend(
         let board_width = board_dimensions.0;
         let board_height = board_dimensions.1;
 
-        commands.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    color: Color::BLACK,
-                    custom_size: Some(Vec2::new(cell_size, cell_size)),
-                    ..default()
-                },
-                transform: Transform::from_xyz(
-                    col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                    row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
-                    1.6,
-                ),
-                ..default()
-            },
-            StaticObstacle { row, col },
-            GameUI,
-        ));
+        spawn_obstacle(
+            &mut commands,
+            row,
+            col,
+            cell_size,
+            padding,
+            board_width,
+            board_height,
+            &mut None,
+        );
+    }
+
+    let mut required_power_up_positions = HashSet::new();
+    for (row, row_cells) in board.iter().enumerate() {
+        for (col, &cell) in row_cells.iter().enumerate() {
+            if let Some(pu) = PowerUpType::from_char(cell) {
+                required_power_up_positions.insert((row, col, pu));
+            }
+        }
+    }
+
+    for (entity, power_up_symbol) in existing_power_ups.iter() {
+        if !required_power_up_positions
+            .iter()
+            .any(|&(r, c, _)| r == power_up_symbol.row && c == power_up_symbol.col)
+        {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
+
+    let existing_positions: HashSet<(usize, usize)> = existing_power_ups
+        .iter()
+        .map(|(_, symbol)| (symbol.row, symbol.col))
+        .collect();
+
+    for &(row, col, pu) in &required_power_up_positions {
+        if !existing_positions.contains(&(row, col)) {
+            let cell_size = 75.0;
+            let padding = 7.5;
+            let cols = board[0].len();
+            let rows = board.len();
+            let board_width = cols as f32 * (cell_size + padding) - padding;
+            let board_height = rows as f32 * (cell_size + padding) - padding;
+
+            spawn_power_up_symbol(
+                &mut commands,
+                row,
+                col,
+                pu,
+                cell_size,
+                padding,
+                board_width,
+                board_height,
+                &asset_server,
+            );
+        }
     }
 }
 
