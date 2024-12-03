@@ -1,5 +1,3 @@
-// src/frontend.rs
-
 use crate::game::{Game, EMPTY, OBSTACLE, PLAYER_O, PLAYER_X};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
@@ -54,15 +52,17 @@ struct GameStateResource {
     game: Game,
     previous_rows: usize,
     previous_cols: usize,
+    power_ups_enabled: bool,
 }
 
 impl Default for GameStateResource {
     fn default() -> Self {
-        let game = Game::new();
+        let game = Game::new(false);
         Self {
             previous_rows: game.get_board().len(),
             previous_cols: game.get_board()[0].len(),
             game,
+            power_ups_enabled: false,
         }
     }
 }
@@ -123,6 +123,9 @@ struct StaticObstacle {
     row: usize,
     col: usize,
 }
+
+#[derive(Component)]
+struct PowerUpsToggleButton(bool);
 
 struct PowerUpActivated {
     row: usize,
@@ -200,39 +203,117 @@ fn setup_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             });
 
-            parent
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(200.0),
-                            height: Val::Px(65.0),
-                            margin: UiRect::all(Val::Px(10.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        background_color: Color::rgb(0.15, 0.65, 0.15).into(),
+            parent.spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(300.0),
+                        height: Val::Px(50.0),
+                        margin: UiRect::all(Val::Px(10.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
-                    StartButton,
-                ))
-                .with_children(|button| {
-                    button.spawn(
-                        TextBundle {
-                            text: Text::from_section(
-                                "Start",
-                                TextStyle {
-                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: 40.0,
-                                    color: Color::WHITE,
-                                },
-                            )
-                            .with_alignment(TextAlignment::Center),
-                            ..default()
-                        },
-                    );
-                });
+                    background_color: Color::GRAY.into(),
+                    ..default()
+                },
+                PowerUpsToggleButton(false),
+            ))
+            .with_children(|button| {
+                button.spawn(
+                    TextBundle {
+                        text: Text::from_section(
+                            "Power-ups: OFF",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                        )
+                        .with_alignment(TextAlignment::Center),
+                        ..default()
+                    },
+                );
+            });
+
+            parent.spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
+                        margin: UiRect::all(Val::Px(10.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    background_color: Color::rgb(0.15, 0.65, 0.15).into(),
+                    ..default()
+                },
+                StartButton,
+            ))
+            .with_children(|button| {
+                button.spawn(
+                    TextBundle {
+                        text: Text::from_section(
+                            "Start",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 40.0,
+                                color: Color::WHITE,
+                            },
+                        )
+                        .with_alignment(TextAlignment::Center),
+                        ..default()
+                    },
+                );
+            });
         });
+}
+
+fn power_ups_toggle_system(
+    mut interaction_query: Query<
+        (
+            &Interaction,
+            &mut BackgroundColor,
+            &mut PowerUpsToggleButton,
+            &Children,
+        ),
+        (Changed<Interaction>, With<PowerUpsToggleButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+) {
+    for (interaction, mut background_color, mut toggle_button, children) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                toggle_button.0 = !toggle_button.0;
+                *background_color = if toggle_button.0 {
+                    Color::DARK_GREEN.into()
+                } else {
+                    Color::GRAY.into()
+                };
+
+                for &child in children.iter() {
+                    if let Ok(mut text) = text_query.get_mut(child) {
+                        text.sections[0].value =
+                            format!("Power-ups: {}", if toggle_button.0 { "ON" } else { "OFF" });
+                    }
+                }
+            }
+            Interaction::Hovered => {
+                *background_color = if toggle_button.0 {
+                    Color::GREEN.into()
+                } else {
+                    Color::DARK_GRAY.into()
+                };
+            }
+            Interaction::None => {
+                *background_color = if toggle_button.0 {
+                    Color::DARK_GREEN.into()
+                } else {
+                    Color::GRAY.into()
+                };
+            }
+        }
+    }
 }
 
 fn main_menu_button_system(
@@ -240,12 +321,17 @@ fn main_menu_button_system(
         (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<StartButton>),
     >,
+    toggle_query: Query<&PowerUpsToggleButton>,
     mut app_state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<GameStateResource>,
 ) {
     for (interaction, mut background_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *background_color = Color::rgb(0.10, 0.55, 0.10).into();
+                if let Ok(toggle_button) = toggle_query.get_single() {
+                    game_state.power_ups_enabled = toggle_button.0;
+                }
                 app_state.set(AppState::InGame);
             }
             Interaction::Hovered => {
@@ -270,7 +356,7 @@ fn setup_game(
     asset_server: Res<AssetServer>,
     mut camera_query: Query<(&mut OrthographicProjection, &mut Transform), With<MainCamera>>,
 ) {
-    state.game = Game::new();
+    state.game = Game::new(state.power_ups_enabled);
     state.previous_rows = state.game.get_board().len();
     state.previous_cols = state.game.get_board()[0].len();
 
@@ -529,7 +615,6 @@ fn update_game(
 
         if keyboard_input.just_pressed(key) {
             if let Ok((row, col)) = state.game.drop_piece(col) {
-                // Check if the board is full after dropping the piece
                 if state.game.is_full() {
                     if !state.game.expanded {
                         state.game.expand_board();
@@ -544,7 +629,6 @@ fn update_game(
                         let (board_width, board_height) = get_board_dimensions(&state);
                         adjust_camera(&mut camera_query, board_width, board_height);
 
-                        // Re-spawn existing pieces
                         for row in 0..state.game.get_board().len() {
                             for col in 0..state.game.get_board()[0].len() {
                                 let player = state.game.get_board()[row][col];
@@ -560,58 +644,12 @@ fn update_game(
                                 }
                             }
                         }
-
-                        // Now, spawn the last piece using the updated board dimensions
-                        spawn_piece(
-                            &mut commands,
-                            &state.game,
-                            row,
-                            col,
-                            &mut meshes,
-                            &mut materials,
-                        );
-
-                        // Since the board has just expanded, we need to handle power-ups and check for a winner again
-                        let cell_char = state.game.get_board()[row][col];
-                        if let Some(pu) = PowerUpType::from_char(cell_char) {
-                            power_up_activated_events.send(PowerUpActivated {
-                                row,
-                                col,
-                                power_up: pu,
-                            });
-                        }
-
-                        if let Some(_winner) = state.game.check_winner() {
-                            app_state.set(AppState::GameOver);
-                            return;
-                        }
-
-                        // Switch player
-                        state.game.switch_player();
-
-                        // Update turn indicator
-                        for mut text in &mut turn_query {
-                            let player_number = if state.game.get_current_player() == PLAYER_X {
-                                "1"
-                            } else {
-                                "2"
-                            };
-                            text.sections[0].value = format!("Player {}'s Turn", player_number);
-                            text.sections[0].style.color =
-                                if state.game.get_current_player() == PLAYER_X {
-                                    Color::RED
-                                } else {
-                                    Color::YELLOW
-                                };
-                        }
-
+                        return;
+                    } else {
+                        app_state.set(AppState::GameOver);
                         return;
                     }
-
-                    app_state.set(AppState::GameOver);
-                    return;
                 } else {
-                    // Spawn the piece normally if the board isn't full
                     spawn_piece(
                         &mut commands,
                         &state.game,
@@ -622,7 +660,6 @@ fn update_game(
                     );
                 }
 
-                // Handle power-up activation
                 let cell_char = state.game.get_board()[row][col];
                 if let Some(pu) = PowerUpType::from_char(cell_char) {
                     power_up_activated_events.send(PowerUpActivated {
@@ -637,10 +674,8 @@ fn update_game(
                     return;
                 }
 
-                // Switch player
                 state.game.switch_player();
 
-                // Update turn indicator
                 for mut text in &mut turn_query {
                     let player_number = if state.game.get_current_player() == PLAYER_X {
                         "1"
@@ -1200,7 +1235,6 @@ fn synchronize_frontend(
     }
 
     for &(row, col) in &required_piece_positions {
-        let cell_char = board[row][col];
         spawn_piece(
             &mut commands,
             &state.game,
@@ -1274,7 +1308,7 @@ pub fn run() {
         .add_systems(OnEnter(AppState::MainMenu), setup_main_menu)
         .add_systems(
             Update,
-            main_menu_button_system.run_if(in_state(AppState::MainMenu)),
+            (main_menu_button_system, power_ups_toggle_system).run_if(in_state(AppState::MainMenu)),
         )
         .add_systems(OnExit(AppState::MainMenu), cleanup_main_menu)
         .add_systems(OnEnter(AppState::InGame), setup_game)

@@ -17,10 +17,11 @@ pub struct Game {
     rows: usize,
     cols: usize,
     pub expanded: bool,
+    pub power_ups_enabled: bool,
 }
 
 impl Game {
-    pub fn new() -> Game {
+    pub fn new(power_ups_enabled: bool) -> Game {
         let mut game = Game {
             board: vec![vec![EMPTY; COLS]; ROWS],
             current_player: PLAYER_X,
@@ -28,12 +29,18 @@ impl Game {
             rows: ROWS,
             cols: COLS,
             expanded: false,
+            power_ups_enabled,
         };
-        game.initialize_power_ups(6);
+        if power_ups_enabled {
+            game.initialize_power_ups(6);
+        }
         game
     }
 
     pub fn initialize_power_ups(&mut self, num_power_ups: usize) {
+        if !self.power_ups_enabled {
+            return;
+        }
         let mut placed = 0;
         let power_up_types = ['B', 'S', 'H'];
 
@@ -50,6 +57,9 @@ impl Game {
     }
 
     pub fn initialize_new_power_ups(&mut self, num_power_ups: usize) {
+        if !self.power_ups_enabled {
+            return;
+        }
         let mut placed = 0;
         let power_up_types = ['B', 'S', 'H'];
 
@@ -129,6 +139,9 @@ impl Game {
     }
 
     pub fn activate_power_up(&mut self, row: usize, col: usize) {
+        if !self.power_ups_enabled {
+            return;
+        }
         match self.board[row][col] {
             'B' => {
                 self.use_bomb(row, col);
@@ -237,7 +250,11 @@ impl Game {
         }
 
         self.board = new_board;
-        let num_new_power_ups = (EXPANDED_ROWS * EXPANDED_COLS - ROWS * COLS) / 10;
+        let num_new_power_ups = if self.power_ups_enabled {
+            (EXPANDED_ROWS * EXPANDED_COLS - ROWS * COLS) / 10
+        } else {
+            0
+        };
         self.initialize_new_power_ups(num_new_power_ups);
     }
 
@@ -294,6 +311,6 @@ impl Game {
 }
 
 pub fn backend() {
-    let mut game = Game::new();
+    let mut game = Game::new(true);
     game.play();
 }
