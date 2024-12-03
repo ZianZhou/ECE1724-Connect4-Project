@@ -369,7 +369,7 @@ fn setup_game(
                 custom_size: Some(Vec2::new(800.0, 600.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(0.0, 0.0, -10.0),
+            transform: Transform::from_xyz(0.0, -50.0, -10.0),
             ..default()
         },
         GameBackground,
@@ -414,6 +414,7 @@ fn render_game_board(
     let padding = 7.5;
     let board_width = cols as f32 * (cell_size + padding) - padding;
     let board_height = rows as f32 * (cell_size + padding) - padding;
+    let board_offset_y = -50.0; // Move the board down by 50 units
 
     commands.spawn((
         SpriteBundle {
@@ -425,7 +426,7 @@ fn render_game_board(
                 )),
                 ..default()
             },
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            transform: Transform::from_xyz(0.0, board_offset_y, 0.0),
             ..default()
         },
         GameUI,
@@ -456,7 +457,7 @@ fn render_game_board(
                 ),
                 transform: Transform::from_xyz(
                     col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                    board_height / 2.0 + 40.0,
+                    board_height / 2.0 + 40.0 + board_offset_y,
                     1.0,
                 ),
                 ..default()
@@ -516,7 +517,9 @@ fn render_game_board(
                     },
                     transform: Transform::from_xyz(
                         col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
+                        row as f32 * (cell_size + padding) - board_height / 2.0
+                            + cell_size / 2.0
+                            + board_offset_y,
                         1.0,
                     ),
                     ..default()
@@ -535,6 +538,7 @@ fn render_game_board(
                     padding,
                     board_width,
                     board_height,
+                    board_offset_y,
                     asset_server,
                 );
             }
@@ -548,9 +552,11 @@ fn render_game_board(
                     padding,
                     board_width,
                     board_height,
+                    board_offset_y,
                     &mut Some(AnimatePiece {
                         target_y: row as f32 * (cell_size + padding) - board_height / 2.0
-                            + cell_size / 2.0,
+                            + cell_size / 2.0
+                            + board_offset_y,
                     }),
                 );
             }
@@ -567,8 +573,13 @@ fn spawn_power_up_symbol(
     padding: f32,
     board_width: f32,
     board_height: f32,
+    board_offset_y: f32,
     asset_server: &Res<AssetServer>,
 ) {
+    let x = col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0;
+    let y =
+        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0 + board_offset_y;
+
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -576,11 +587,7 @@ fn spawn_power_up_symbol(
                 custom_size: Some(Vec2::new(cell_size / 2.0, cell_size / 2.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(
-                col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
-                1.5,
-            ),
+            transform: Transform::from_xyz(x, y, 1.5),
             ..default()
         },
         PowerUpSymbol { row, col },
@@ -597,11 +604,7 @@ fn spawn_power_up_symbol(
                     color: Color::WHITE,
                 },
             ),
-            transform: Transform::from_xyz(
-                col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
-                2.0,
-            ),
+            transform: Transform::from_xyz(x, y, 2.0),
             ..default()
         },
         PowerUpSymbol { row, col },
@@ -617,20 +620,19 @@ fn spawn_obstacle(
     padding: f32,
     board_width: f32,
     board_height: f32,
+    board_offset_y: f32,
     animate_piece: &mut Option<AnimatePiece>,
 ) {
     let z = 2.0;
     let initial_y = if animate_piece.is_some() {
-        board_height / 2.0 + cell_size
+        board_height / 2.0 + cell_size + board_offset_y
     } else {
-        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0
+        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0 + board_offset_y
     };
 
-    let transform = Transform::from_xyz(
-        col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-        initial_y,
-        z,
-    );
+    let x = col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0;
+
+    let transform = Transform::from_xyz(x, initial_y, z);
 
     let mut entity_commands = commands.spawn((
         SpriteBundle {
@@ -800,6 +802,7 @@ fn spawn_piece(
         let rows = state.game.get_board().len();
         let board_width = cols as f32 * (cell_size + padding) - padding;
         let board_height = rows as f32 * (cell_size + padding) - padding;
+        let board_offset_y = -50.0; // Move the board down by 50 units
 
         let circle_mesh = meshes.add(Mesh::from(Circle::new(cell_size / 2.0 - 5.0)));
         let material_handle = materials.add(ColorMaterial::from(color));
@@ -810,14 +813,16 @@ fn spawn_piece(
                 material: material_handle,
                 transform: Transform::from_xyz(
                     col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0,
-                    board_height / 2.0 + cell_size,
+                    board_height / 2.0 + cell_size + board_offset_y,
                     z,
                 ),
                 ..default()
             },
             Piece { player, row, col },
             AnimatePiece {
-                target_y: row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0,
+                target_y: row as f32 * (cell_size + padding) - board_height / 2.0
+                    + cell_size / 2.0
+                    + board_offset_y,
             },
             GameUI,
         ));
@@ -839,8 +844,10 @@ fn spawn_existing_piece(
     let rows = game.get_board().len();
     let board_width = cols as f32 * (cell_size + padding) - padding;
     let board_height = rows as f32 * (cell_size + padding) - padding;
-    let initial_y = board_height / 2.0 + cell_size;
-    let target_y = row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0;
+    let board_offset_y = -50.0; // Move the board down by 50 units
+    let initial_y = board_height / 2.0 + cell_size + board_offset_y;
+    let target_y =
+        row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0 + board_offset_y;
 
     let x_position = col as f32 * (cell_size + padding) - board_width / 2.0 + cell_size / 2.0;
 
@@ -880,6 +887,7 @@ fn spawn_existing_piece(
             padding,
             board_width,
             board_height,
+            board_offset_y,
             &mut None,
         );
     }
@@ -1199,6 +1207,7 @@ fn handle_power_up_activation(
                         let (board_width, board_height) = get_board_dimensions(&state);
                         let cell_size = 75.0;
                         let padding = 7.5;
+                        let board_offset_y = -50.0;
 
                         commands.spawn((
                             SpriteBundle {
@@ -1211,7 +1220,8 @@ fn handle_power_up_activation(
                                     cell.col as f32 * (cell_size + padding) - board_width / 2.0
                                         + cell_size / 2.0,
                                     cell.row as f32 * (cell_size + padding) - board_height / 2.0
-                                        + cell_size / 2.0,
+                                        + cell_size / 2.0
+                                        + board_offset_y,
                                     3.0,
                                 ),
                                 ..default()
@@ -1241,6 +1251,7 @@ fn handle_power_up_activation(
                         let (board_width, board_height) = get_board_dimensions(&state);
                         let cell_size = 75.0;
                         let padding = 7.5;
+                        let board_offset_y = -50.0;
 
                         spawn_obstacle(
                             &mut commands,
@@ -1250,10 +1261,12 @@ fn handle_power_up_activation(
                             padding,
                             board_width,
                             board_height,
+                            board_offset_y,
                             &mut Some(AnimatePiece {
                                 target_y: cell.row as f32 * (cell_size + padding)
                                     - board_height / 2.0
-                                    + cell_size / 2.0,
+                                    + cell_size / 2.0
+                                    + board_offset_y,
                             }),
                         );
                     }
@@ -1355,6 +1368,7 @@ fn synchronize_frontend(
         let board_dimensions = get_board_dimensions(&state);
         let board_width = board_dimensions.0;
         let board_height = board_dimensions.1;
+        let board_offset_y = -50.0;
 
         spawn_obstacle(
             &mut commands,
@@ -1364,6 +1378,7 @@ fn synchronize_frontend(
             padding,
             board_width,
             board_height,
+            board_offset_y,
             &mut None,
         );
     }
@@ -1399,6 +1414,7 @@ fn synchronize_frontend(
             let rows = board.len();
             let board_width = cols as f32 * (cell_size + padding) - padding;
             let board_height = rows as f32 * (cell_size + padding) - padding;
+            let board_offset_y = -50.0;
 
             spawn_power_up_symbol(
                 &mut commands,
@@ -1409,6 +1425,7 @@ fn synchronize_frontend(
                 padding,
                 board_width,
                 board_height,
+                board_offset_y,
                 &asset_server,
             );
         }
