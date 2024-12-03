@@ -77,12 +77,13 @@ struct MainMenuButton;
 struct TurnIndicator;
 
 #[derive(Component)]
+#[allow(dead_code)]
 struct Cell {
     row: usize,
     col: usize,
     power_up: Option<PowerUpType>,
 }
-
+#[allow(dead_code)]
 #[derive(Component)]
 struct Piece {
     player: char,
@@ -404,8 +405,8 @@ fn render_game_board(
     commands: &mut Commands,
     state: &GameStateResource,
     asset_server: &Res<AssetServer>,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
+    _meshes: &mut ResMut<Assets<Mesh>>,
+    _materials: &mut ResMut<Assets<ColorMaterial>>,
 ) {
     let rows = state.game.get_board().len();
     let cols = state.game.get_board()[0].len();
@@ -1347,7 +1348,7 @@ fn synchronize_frontend(
         }
     }
 
-    for (entity, obstacle) in existing_obstacles.iter() {
+    for (_entity, obstacle) in existing_obstacles.iter() {
         required_obstacle_positions.remove(&(obstacle.row, obstacle.col));
     }
 

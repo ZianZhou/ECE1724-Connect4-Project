@@ -83,6 +83,7 @@ impl Game {
         &self.board
     }
 
+    #[allow(dead_code)]
     pub fn print_board(&self) {
         for row in self.board.iter().rev() {
             for &cell in row.iter() {
@@ -258,6 +259,7 @@ impl Game {
         self.initialize_new_power_ups(num_new_power_ups);
     }
 
+    #[allow(dead_code)]
     pub fn play(&mut self) {
         loop {
             self.print_board();
@@ -310,6 +312,7 @@ impl Game {
     }
 }
 
+#[allow(dead_code)]
 pub fn backend() {
     let mut game = Game::new(true);
     game.play();
