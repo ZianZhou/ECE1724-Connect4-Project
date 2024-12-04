@@ -415,7 +415,7 @@ fn render_game_board(
     let padding = 7.5;
     let board_width = cols as f32 * (cell_size + padding) - padding;
     let board_height = rows as f32 * (cell_size + padding) - padding;
-    let board_offset_y = -50.0; // Move the board down by 50 units
+    let board_offset_y = -50.0;
 
     commands.spawn((
         SpriteBundle {
@@ -803,7 +803,7 @@ fn spawn_piece(
         let rows = state.game.get_board().len();
         let board_width = cols as f32 * (cell_size + padding) - padding;
         let board_height = rows as f32 * (cell_size + padding) - padding;
-        let board_offset_y = -50.0; // Move the board down by 50 units
+        let board_offset_y = -50.0;
 
         let circle_mesh = meshes.add(Mesh::from(Circle::new(cell_size / 2.0 - 5.0)));
         let material_handle = materials.add(ColorMaterial::from(color));
@@ -845,7 +845,7 @@ fn spawn_existing_piece(
     let rows = game.get_board().len();
     let board_width = cols as f32 * (cell_size + padding) - padding;
     let board_height = rows as f32 * (cell_size + padding) - padding;
-    let board_offset_y = -50.0; // Move the board down by 50 units
+    let board_offset_y = -50.0;
     let initial_y = board_height / 2.0 + cell_size + board_offset_y;
     let target_y =
         row as f32 * (cell_size + padding) - board_height / 2.0 + cell_size / 2.0 + board_offset_y;
@@ -1191,6 +1191,7 @@ fn handle_power_up_activation(
     mut commands: Commands,
     query: Query<(Entity, &Cell), With<Cell>>,
     piece_query: Query<(Entity, &Piece), With<Piece>>,
+    obstacle_query: Query<(Entity, &StaticObstacle), With<StaticObstacle>>,
     power_up_query: Query<(Entity, &PowerUpSymbol)>,
     state: Res<GameStateResource>,
 ) {
@@ -1240,6 +1241,13 @@ fn handle_power_up_activation(
                             for (piece_entity, piece) in piece_query.iter() {
                                 if piece.row == target_row && piece.col == target_col {
                                     commands.entity(piece_entity).despawn();
+                                    break;
+                                }
+                            }
+
+                            for (obstacle_entity, obstacle) in obstacle_query.iter() {
+                                if obstacle.row == target_row && obstacle.col == target_col {
+                                    commands.entity(obstacle_entity).despawn();
                                     break;
                                 }
                             }
@@ -1348,8 +1356,12 @@ fn synchronize_frontend(
         }
     }
 
-    for (_entity, obstacle) in existing_obstacles.iter() {
-        required_obstacle_positions.remove(&(obstacle.row, obstacle.col));
+    for (entity, obstacle) in existing_obstacles.iter() {
+        if !required_obstacle_positions.contains(&(obstacle.row, obstacle.col)) {
+            commands.entity(entity).despawn();
+        } else {
+            required_obstacle_positions.remove(&(obstacle.row, obstacle.col));
+        }
     }
 
     for &(row, col) in &required_piece_positions {
