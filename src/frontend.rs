@@ -692,9 +692,7 @@ fn update_game(
                     if !state.game.expanded {
                         state.game.expand_board();
                         state.game.expanded = true;
-
-                        state.previous_rows = state.game.get_board().len();
-                        state.previous_cols = state.game.get_board()[0].len();
+                        state.game.switch_player();
 
                         cleanup_game_board(&mut commands, &game_ui_query);
                         render_game_board(
@@ -1378,9 +1376,7 @@ fn synchronize_frontend(
     for &(row, col) in &required_obstacle_positions {
         let cell_size = 75.0;
         let padding = 7.5;
-        let board_dimensions = get_board_dimensions(&state);
-        let board_width = board_dimensions.0;
-        let board_height = board_dimensions.1;
+        let (board_width, board_height) = get_board_dimensions(&state);
         let board_offset_y = -50.0;
 
         spawn_obstacle(
