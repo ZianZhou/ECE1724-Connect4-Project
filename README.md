@@ -20,7 +20,7 @@ Github: https://github.com/ZianZhou/ECE1724-Connect4-Project
 
 ## Video Demo
 
-[https://youtu.be/znnD6BMbQsk](https://youtu.be/znnD6BMbQsk)
+[![Watch the video](assets/icons/Thumbnail.png)](https://youtu.be/znnD6BMbQsk)
 
 ## Motivation
 
